@@ -16,7 +16,7 @@ public class Textchange : MonoBehaviour
         else
         {
             // set an initial status
-            alksStatusText.text = "System Initialized";
+            alksStatusText.text = "TOR ON - ALKS OFF";
         }
     }
 
