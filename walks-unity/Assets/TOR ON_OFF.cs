@@ -1,49 +1,75 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO; // for CSV
+using System;   // For DateTime
 
 public class TORON_OFF : MonoBehaviour
 {
     public Light mainLight;
 
-    // define colors based on hex values
-    private Color torOnColor = new Color(234f / 255f, 223f / 255f, 192f / 255f); // Hex EADFC0 (TOR ON color)
-    private Color nonCriticalTorColor = new Color(255f / 255f, 166f / 255f, 0f); // Hex FFA600 (Non-Critical TOR)
-    private Color criticalTorColor = new Color(255f / 255f, 38f / 255f, 0f);     // Hex FF2600 (Critical TOR)
-    private Color cyanColor = new Color(0f / 255f, 212f / 255f, 255f / 255f);    // Hex 00D4FF (Cyan)
+    // Define colors based on hex values
+    private Color torOnColor = new Color(234f / 255f, 223f / 255f, 192f / 255f); // Hex EADFC0 
+    private Color nonCriticalTorColor = new Color(255f / 255f, 166f / 255f, 0f); // Hex FFA600 
+    private Color criticalTorColor = new Color(255f / 255f, 38f / 255f, 0f);     // Hex FF2600 
+    private Color darkGreyColor = new Color(76f / 255f, 76f / 255f, 76f / 255f); // Hex 4C4C4C 
 
-    private bool isBlinking = false;          // Tracks if the red light is blinking
-    private float torTimer = 0f;              // Timer for non-critical and critical TOR
-    private bool isNonCriticalActive = false; // Tracks if Non-Critical TOR is active
-    private bool isCriticalActive = false;    // Tracks if Critical TOR is active
+    private bool isBlinking = false;
+    private float torTimer = 0f;
+    private bool isNonCriticalActive = false;
+    private bool isCriticalActive = false;
+
+    private string filePath; // pathing to the CSV file and creating new one if there is none
 
     void Start()
     {
-        // initial color is the beige torOnColor
+        // creating the file path for the CSV file
+        string folderPath = Path.Combine(Application.dataPath, "CSV");
+        filePath = Path.Combine(folderPath, "TORData.csv");
+
+        // does the CSV folder exists
+        if (!Directory.Exists(folderPath))
+        {
+            Directory.CreateDirectory(folderPath);
+        }
+
+        // creting the file and write the header if it doesn't exist
+        if (!File.Exists(filePath))
+        {
+            File.WriteAllText(filePath, "Timestamp,Keypress,Color\n");
+        }
+
+        // this is the initial color is the beige torOnColor
         if (mainLight != null)
         {
             mainLight.color = torOnColor;
         }
         Camera.main.backgroundColor = torOnColor;
+
+        // logging the initial state
+        LogInteraction("0", torOnColor);
     }
 
     void Update()
     {
-        // check key input to reset the state if any key is pressed
-        if (Input.GetKeyDown(KeyCode.O))
+        // checking the key input to reset the state if any key is pressed
+        if (Input.GetKeyDown(KeyCode.A))
         {
             ActivateTorOn();
+            LogInteraction("A", torOnColor);
         }
-        else if (Input.GetKeyDown(KeyCode.Y))
+        else if (Input.GetKeyDown(KeyCode.S))
         {
             ActivateNonCriticalTor();
+            LogInteraction("S", nonCriticalTorColor);
         }
-        else if (Input.GetKeyDown(KeyCode.U))
+        else if (Input.GetKeyDown(KeyCode.D))
         {
             ActivateCriticalTor();
+            LogInteraction("D", criticalTorColor);
         }
 
-        // Handle the timer and blinking logic
+        // the the timer and blinking logic
         HandleTorState();
     }
 
@@ -80,11 +106,12 @@ public class TORON_OFF : MonoBehaviour
         Debug.Log("Critical TOR: Light and Background color set to FF2600");
     }
 
-    void ActivateCyan()
+    void ActivateDarkGrey()
     {
-        if (mainLight != null) mainLight.color = cyanColor;
-        Camera.main.backgroundColor = cyanColor;
-        Debug.Log("Cyan State: Light and Background color set to 00D4FF");
+        if (mainLight != null) mainLight.color = darkGreyColor;
+        Camera.main.backgroundColor = darkGreyColor;
+        Debug.Log("Dark Grey State: Light and Background color set to 4C4C4C");
+        LogInteraction("0", darkGreyColor); // Log dark grey activation
     }
 
     void HandleTorState()
@@ -92,9 +119,10 @@ public class TORON_OFF : MonoBehaviour
         if (isNonCriticalActive)
         {
             torTimer += Time.deltaTime;
-            if (torTimer >= 10f) // after 10 seconds, switch to criticalTor 
+            if (torTimer >= 10f) // after the 10 seconds, switch to criticalTor 
             {
                 ActivateCriticalTor();
+                LogInteraction("0", criticalTorColor);
             }
         }
         else if (isCriticalActive)
@@ -108,10 +136,10 @@ public class TORON_OFF : MonoBehaviour
                     StartCoroutine(BlinkRedLight());
                 }
             }
-            else if (torTimer >= 10f) // switch to safety after the 10seconds of CriticalTOr
+            else if (torTimer >= 10f) // switching to safety after the 10 seconds of CriticalTOR
             {
-                StopCoroutine(BlinkRedLight());  // makes blinking stop
-                ActivateCyan();  // Set to Cyan after 10 seconds
+                StopCoroutine(BlinkRedLight());
+                ActivateDarkGrey();
             }
         }
     }
@@ -122,12 +150,23 @@ public class TORON_OFF : MonoBehaviour
         {
             if (mainLight != null) mainLight.color = (mainLight.color == criticalTorColor) ? torOnColor : criticalTorColor;
             Camera.main.backgroundColor = (Camera.main.backgroundColor == criticalTorColor) ? torOnColor : criticalTorColor;
-            yield return new WaitForSeconds(0.5f); // Toggle color every 0.5 seconds
+            yield return new WaitForSeconds(0.5f); // toggle color every 0.5 seconds
         }
 
-        // Ensure the colors stay at the critical color after blinking ends
+        //  the colors stay at the critical color after blinking ends
         if (mainLight != null) mainLight.color = criticalTorColor;
         Camera.main.backgroundColor = criticalTorColor;
     }
-}
 
+    void LogInteraction(string keypress, Color color)
+    {
+        string timestamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        string colorHex = ColorUtility.ToHtmlStringRGB(color);
+        string logEntry = $"{timestamp},{keypress},{colorHex}\n";
+
+        // creates the log entry to the file
+        File.AppendAllText(filePath, logEntry);
+
+        Debug.Log($"Logged: {logEntry}");
+    }
+}
