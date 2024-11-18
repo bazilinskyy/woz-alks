@@ -212,3 +212,6 @@ walks/*.p
 **/LightingData.asset
 **/Lightmap-*_comp_light.exr
 **/ReflectionProbe-*.exr
+
+# Data files
+walks-unity/Assets/CSV
