@@ -13,6 +13,7 @@ public class TORON_OFF : MonoBehaviour
     public AudioSource beepAudioSource;
 
     private Color torOnColor = new Color(234f / 255f, 223f / 255f, 192f / 255f); // Hex EADFC0 
+    private Color torOffColor = new Color(0f, 212f / 255f, 255f / 255f);         // hex is 00D4FF
     private Color nonCriticalTorColor = new Color(255f / 255f, 166f / 255f, 0f); // Hex FFA600 
     private Color criticalTorColor = new Color(255f / 255f, 38f / 255f, 0f);     // Hex FF2600 
     private Color darkGreyColor = new Color(76f / 255f, 76f / 255f, 76f / 255f); // Hex 4C4C4C 
@@ -65,14 +66,20 @@ public class TORON_OFF : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.S))
         {
             PlayPopSound();
-            ActivateNonCriticalTor();
-            LogInteraction("S", "ALKS ON - non critical", "Orange");
+            ActivateTorOff();
+            LogInteraction("S", "TOR OFF - ALKS ON", "Cyan");
         }
         else if (Input.GetKeyDown(KeyCode.D))
         {
             PlayPopSound();
+            ActivateNonCriticalTor();
+            LogInteraction("D", "ALKS ON - non critical", "Orange");
+        }
+        else if (Input.GetKeyDown(KeyCode.F))
+        {
+            PlayPopSound();
             ActivateCriticalTor();
-            LogInteraction("D", "ALKS ON - critical", "Red");
+            LogInteraction("F", "ALKS ON - critical", "Red");
         }
 
         HandleTorState();
@@ -87,6 +94,18 @@ public class TORON_OFF : MonoBehaviour
         torTimer = 0f;
 
         UpdateStatusText("TOR ON - ALKS OFF");
+        StopBeepSound();
+    }
+
+    void ActivateTorOff()
+    {
+        SetLightAndBackground(torOffColor);
+        isNonCriticalActive = false;
+        isCriticalActive = false;
+        isBlinking = false;
+        torTimer = 0f;
+
+        UpdateStatusText("TOR OFF - ALKS ON");
         StopBeepSound();
     }
 
