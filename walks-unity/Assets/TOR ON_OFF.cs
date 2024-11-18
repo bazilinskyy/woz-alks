@@ -1,90 +1,130 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using TMPro;
+using System.IO; // this is for the CSV
+using System;   // this is DateTime
 
 public class TORON_OFF : MonoBehaviour
 {
     public Light mainLight;
+    public TMP_Text alksStatusText; // TMP_Text for status updates
+    public AudioSource popAudioSource;
+    public AudioSource beepAudioSource;
 
-    // define colors based on hex values
-    private Color torOnColor = new Color(234f / 255f, 223f / 255f, 192f / 255f); // Hex EADFC0 (TOR ON color)
-    private Color nonCriticalTorColor = new Color(255f / 255f, 166f / 255f, 0f); // Hex FFA600 (Non-Critical TOR)
-    private Color criticalTorColor = new Color(255f / 255f, 38f / 255f, 0f);     // Hex FF2600 (Critical TOR)
-    private Color cyanColor = new Color(0f / 255f, 212f / 255f, 255f / 255f);    // Hex 00D4FF (Cyan)
+    private Color torOnColor = new Color(234f / 255f, 223f / 255f, 192f / 255f); // Hex EADFC0 
+    private Color nonCriticalTorColor = new Color(255f / 255f, 166f / 255f, 0f); // Hex FFA600 
+    private Color criticalTorColor = new Color(255f / 255f, 38f / 255f, 0f);     // Hex FF2600 
+    private Color darkGreyColor = new Color(76f / 255f, 76f / 255f, 76f / 255f); // Hex 4C4C4C 
 
-    private bool isBlinking = false;          // Tracks if the red light is blinking
-    private float torTimer = 0f;              // Timer for non-critical and critical TOR
-    private bool isNonCriticalActive = false; // Tracks if Non-Critical TOR is active
-    private bool isCriticalActive = false;    // Tracks if Critical TOR is active
+    private bool isBlinking = false;
+    private float torTimer = 0f;
+    private bool isNonCriticalActive = false;
+    private bool isCriticalActive = false;
+
+    private string filePath;
+    private Coroutine beepCoroutine;
 
     void Start()
     {
-        // initial color is the beige torOnColor
+        // generating the unique CSV file
+        string folderPath = Path.Combine(Application.dataPath, "CSV");
+        if (!Directory.Exists(folderPath))
+        {
+            Directory.CreateDirectory(folderPath);
+        }
+        string fileName = DateTime.Now.ToString("dd-MM-yy-HH-mm-ss") + ".csv";
+        filePath = Path.Combine(folderPath, fileName);
+        File.WriteAllText(filePath, "Timestamp,Keypress,State,Color\n");
+
+        // initial light and background
         if (mainLight != null)
         {
             mainLight.color = torOnColor;
         }
         Camera.main.backgroundColor = torOnColor;
+
+        // initial text status
+        if (alksStatusText != null)
+        {
+            alksStatusText.text = "TOR ON - ALKS OFF";
+        }
+
+        LogInteraction("0", "TOR ON - ALKS OFF", "White");
     }
 
     void Update()
     {
-        // check key input to reset the state if any key is pressed
-        if (Input.GetKeyDown(KeyCode.O))
+        // see key input
+        if (Input.GetKeyDown(KeyCode.A))
         {
+            PlayPopSound();
             ActivateTorOn();
+            LogInteraction("A", "TOR ON - ALKS OFF", "White");
         }
-        else if (Input.GetKeyDown(KeyCode.Y))
+        else if (Input.GetKeyDown(KeyCode.S))
         {
+            PlayPopSound();
             ActivateNonCriticalTor();
+            LogInteraction("S", "ALKS ON - non critical", "Orange");
         }
-        else if (Input.GetKeyDown(KeyCode.U))
+        else if (Input.GetKeyDown(KeyCode.D))
         {
+            PlayPopSound();
             ActivateCriticalTor();
+            LogInteraction("D", "ALKS ON - critical", "Red");
         }
 
-        // Handle the timer and blinking logic
         HandleTorState();
     }
 
     void ActivateTorOn()
     {
-        if (mainLight != null) mainLight.color = torOnColor;
-        Camera.main.backgroundColor = torOnColor;
+        SetLightAndBackground(torOnColor);
         isNonCriticalActive = false;
         isCriticalActive = false;
         isBlinking = false;
         torTimer = 0f;
-        Debug.Log("TOR ON: Light and Background color set to EADFC0");
+
+        UpdateStatusText("TOR ON - ALKS OFF");
+        StopBeepSound();
     }
 
     void ActivateNonCriticalTor()
     {
-        if (mainLight != null) mainLight.color = nonCriticalTorColor;
-        Camera.main.backgroundColor = nonCriticalTorColor;
+        SetLightAndBackground(nonCriticalTorColor);
         isNonCriticalActive = true;
         isCriticalActive = false;
         isBlinking = false;
         torTimer = 0f;
-        Debug.Log("Non-Critical TOR: Light and Background color set to FFA600");
+
+        UpdateStatusText("ALKS ON - non critical");
+        StopBeepSound();
     }
 
     void ActivateCriticalTor()
     {
-        if (mainLight != null) mainLight.color = criticalTorColor;
-        Camera.main.backgroundColor = criticalTorColor;
+        SetLightAndBackground(criticalTorColor);
         isNonCriticalActive = false;
         isCriticalActive = true;
         isBlinking = false;
         torTimer = 0f;
-        Debug.Log("Critical TOR: Light and Background color set to FF2600");
+
+        UpdateStatusText("ALKS ON - critical");
+        StartBeepSound();
     }
 
-    void ActivateCyan()
+    void ActivateDarkGrey()
     {
-        if (mainLight != null) mainLight.color = cyanColor;
-        Camera.main.backgroundColor = cyanColor;
-        Debug.Log("Cyan State: Light and Background color set to 00D4FF");
+        SetLightAndBackground(darkGreyColor);
+        UpdateStatusText("System Shut Down");
+        StopBeepSound();
+    }
+
+    void SetLightAndBackground(Color color)
+    {
+        if (mainLight != null) mainLight.color = color;
+        Camera.main.backgroundColor = color;
     }
 
     void HandleTorState()
@@ -92,15 +132,16 @@ public class TORON_OFF : MonoBehaviour
         if (isNonCriticalActive)
         {
             torTimer += Time.deltaTime;
-            if (torTimer >= 10f) // after 10 seconds, switch to criticalTor 
+            if (torTimer >= 10f)
             {
                 ActivateCriticalTor();
+                LogInteraction("0", "ALKS ON - critical", "Red");
             }
         }
         else if (isCriticalActive)
         {
             torTimer += Time.deltaTime;
-            if (torTimer >= 7f && torTimer < 10f) // after 7 seconds of red, 3 seconds of blinking
+            if (torTimer >= 7f && torTimer < 10f)
             {
                 if (!isBlinking)
                 {
@@ -108,10 +149,11 @@ public class TORON_OFF : MonoBehaviour
                     StartCoroutine(BlinkRedLight());
                 }
             }
-            else if (torTimer >= 10f) // switch to safety after the 10seconds of CriticalTOr
+            else if (torTimer >= 10f)
             {
-                StopCoroutine(BlinkRedLight());  // makes blinking stop
-                ActivateCyan();  // Set to Cyan after 10 seconds
+                StopCoroutine(BlinkRedLight());
+                ActivateDarkGrey();
+                LogInteraction("0", "System Shut Down", "Black");
             }
         }
     }
@@ -120,14 +162,55 @@ public class TORON_OFF : MonoBehaviour
     {
         while (isBlinking && torTimer < 10f)
         {
-            if (mainLight != null) mainLight.color = (mainLight.color == criticalTorColor) ? torOnColor : criticalTorColor;
-            Camera.main.backgroundColor = (Camera.main.backgroundColor == criticalTorColor) ? torOnColor : criticalTorColor;
-            yield return new WaitForSeconds(0.5f); // Toggle color every 0.5 seconds
+            SetLightAndBackground((mainLight.color == criticalTorColor) ? torOnColor : criticalTorColor);
+            yield return new WaitForSeconds(0.5f);
         }
+        SetLightAndBackground(criticalTorColor);
+    }
 
-        // Ensure the colors stay at the critical color after blinking ends
-        if (mainLight != null) mainLight.color = criticalTorColor;
-        Camera.main.backgroundColor = criticalTorColor;
+    void StartBeepSound()
+    {
+        if (beepCoroutine != null) StopCoroutine(beepCoroutine);
+        beepCoroutine = StartCoroutine(BeepSound());
+    }
+
+    void StopBeepSound()
+    {
+        if (beepCoroutine != null)
+        {
+            StopCoroutine(beepCoroutine);
+            beepCoroutine = null;
+        }
+    }
+
+    IEnumerator BeepSound()
+    {
+        while (isCriticalActive)
+        {
+            if (beepAudioSource != null) beepAudioSource.Play();
+            float interval = torTimer >= 7f ? 0.5f : 1f;
+            yield return new WaitForSeconds(interval);
+        }
+    }
+
+    void PlayPopSound()
+    {
+        if (popAudioSource != null) popAudioSource.Play();
+    }
+
+    void UpdateStatusText(string status)
+    {
+        if (alksStatusText != null)
+        {
+            alksStatusText.text = status;
+        }
+    }
+
+    void LogInteraction(string keypress, string state, string color)
+    {
+        string timestamp = DateTime.Now.ToString("HH:mm:ss:fff");
+        string logEntry = $"{timestamp},{keypress},{state},{color}\n";
+        File.AppendAllText(filePath, logEntry);
+        Debug.Log($"Logged: {logEntry}");
     }
 }
-
