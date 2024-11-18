@@ -214,4 +214,4 @@ walks/*.p
 **/ReflectionProbe-*.exr
 
 # Data files
-# walks-unity/Assets/CSV
+walks-unity/Assets/CSV
