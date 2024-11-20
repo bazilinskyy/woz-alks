@@ -22,6 +22,7 @@ public class TORON_OFF : MonoBehaviour
     private float torTimer = 0f;
     private bool isNonCriticalActive = false;
     private bool isCriticalActive = false;
+    private bool isShutdownLogged = false;
 
     private string filePath;
     private Coroutine beepCoroutine;
@@ -48,10 +49,10 @@ public class TORON_OFF : MonoBehaviour
         // initial text status
         if (alksStatusText != null)
         {
-            alksStatusText.text = "TOR ON - ALKS OFF";
+            alksStatusText.text = "Manual Mode";
         }
 
-        LogInteraction("0", "TOR ON - ALKS OFF", "White");
+        LogInteraction("0", "Manual Mode", "Beige");
     }
 
     void Update()
@@ -61,25 +62,25 @@ public class TORON_OFF : MonoBehaviour
         {
             PlayPopSound();
             ActivateTorOn();
-            LogInteraction("A", "TOR ON - ALKS OFF", "White");
+            LogInteraction("A", "Manual Mode", "Beige");
         }
         else if (Input.GetKeyDown(KeyCode.S))
         {
             PlayPopSound();
             ActivateTorOff();
-            LogInteraction("S", "TOR OFF - ALKS ON", "Cyan");
+            LogInteraction("S", "ALKS ON", "Cyan");
         }
         else if (Input.GetKeyDown(KeyCode.D))
         {
             PlayPopSound();
             ActivateNonCriticalTor();
-            LogInteraction("D", "ALKS ON - non critical", "Orange");
+            LogInteraction("D", "Requesting Manual Take Over", "Orange");
         }
         else if (Input.GetKeyDown(KeyCode.F))
         {
             PlayPopSound();
             ActivateCriticalTor();
-            LogInteraction("F", "ALKS ON - critical", "Red");
+            LogInteraction("F", "Requesting Manual Take Over", "Red");
         }
 
         HandleTorState();
@@ -93,7 +94,7 @@ public class TORON_OFF : MonoBehaviour
         isBlinking = false;
         torTimer = 0f;
 
-        UpdateStatusText("TOR ON - ALKS OFF");
+        UpdateStatusText("Manual Mode");
         StopBeepSound();
     }
 
@@ -105,7 +106,7 @@ public class TORON_OFF : MonoBehaviour
         isBlinking = false;
         torTimer = 0f;
 
-        UpdateStatusText("TOR OFF - ALKS ON");
+        UpdateStatusText("ALKS ON");
         StopBeepSound();
     }
 
@@ -117,8 +118,12 @@ public class TORON_OFF : MonoBehaviour
         isBlinking = false;
         torTimer = 0f;
 
-        UpdateStatusText("ALKS ON - non critical");
-        StopBeepSound();
+        //text but log "Non Critical" for CSV
+        UpdateStatusText("Requesting Manual Take Over");
+        StartBeepSound();
+
+        // logging "Non Critical" for the CSV
+        LogInteraction("D", "Non Critical", "Orange");
     }
 
     void ActivateCriticalTor()
@@ -129,8 +134,10 @@ public class TORON_OFF : MonoBehaviour
         isBlinking = false;
         torTimer = 0f;
 
-        UpdateStatusText("ALKS ON - critical");
+        UpdateStatusText("Requesting Manual Take Over");
         StartBeepSound();
+
+        LogInteraction("0", "Critical", "Red");
     }
 
     void ActivateDarkGrey()
@@ -154,7 +161,7 @@ public class TORON_OFF : MonoBehaviour
             if (torTimer >= 10f)
             {
                 ActivateCriticalTor();
-                LogInteraction("0", "ALKS ON - critical", "Red");
+                LogInteraction("0", "Requesting Manual Take Over", "Red");
             }
         }
         else if (isCriticalActive)
@@ -172,8 +179,19 @@ public class TORON_OFF : MonoBehaviour
             {
                 StopCoroutine(BlinkRedLight());
                 ActivateDarkGrey();
-                LogInteraction("0", "System Shut Down", "Black");
+
+                // Log shutdown only if it hasn't been logged yet
+                if (!isShutdownLogged)
+                {
+                    LogInteraction("0", "System Shut Down", "Black");
+                    isShutdownLogged = true; // Mark shutdown as logged
+                }
             }
+        }
+        else
+        {
+            // Reset the shutdown flag when not in critical state
+            isShutdownLogged = false;
         }
     }
 
@@ -204,13 +222,31 @@ public class TORON_OFF : MonoBehaviour
 
     IEnumerator BeepSound()
     {
+        while (isNonCriticalActive)
+        {
+            if (beepAudioSource != null)
+            {
+                beepAudioSource.pitch = 0.5f;
+                beepAudioSource.volume = 0.5f;
+                beepAudioSource.Play();
+            }
+            yield return new WaitForSeconds(1.5f); // Beep every 1.5 seconds in non-critical state
+        }
+
         while (isCriticalActive)
         {
-            if (beepAudioSource != null) beepAudioSource.Play();
-            float interval = torTimer >= 7f ? 0.5f : 1f;
-            yield return new WaitForSeconds(interval);
+            float interval = torTimer >= 7f ? 0.5f : 1.0f; // Last 3 seconds: beep every 0.5s
+            if (beepAudioSource != null)
+            {
+                beepAudioSource.pitch = 0.8f;
+                beepAudioSource.volume = 1.0f;
+                beepAudioSource.Play();
+            }
+            yield return new WaitForSeconds(interval); // Adjust interval dynamically
         }
     }
+
+
 
     void PlayPopSound()
     {
@@ -233,3 +269,6 @@ public class TORON_OFF : MonoBehaviour
         Debug.Log($"Logged: {logEntry}");
     }
 }
+
+
+
