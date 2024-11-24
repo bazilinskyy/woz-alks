@@ -59,6 +59,13 @@ public class TORON_OFF : MonoBehaviour
 
     void Update()
     {
+        // closing application
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            Application.Quit();
+            Debug.Log("closing application");
+        }
+
         // see key input
         if (Input.GetKeyDown(KeyCode.A))
         {
