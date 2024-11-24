@@ -14,9 +14,11 @@ public class TORON_OFF : MonoBehaviour
 
     private Color torOnColor = new Color(234f / 255f, 223f / 255f, 192f / 255f); // Hex EADFC0 
     private Color torOffColor = new Color(0f, 212f / 255f, 255f / 255f);         // hex is 00D4FF
-    private Color nonCriticalTorColor = new Color(255f / 255f, 166f / 255f, 0f); // Hex FFA600 
-    private Color criticalTorColor = new Color(255f / 255f, 38f / 255f, 0f);     // Hex FF2600 
-    private Color darkGreyColor = new Color(76f / 255f, 76f / 255f, 76f / 255f); // Hex 4C4C4C 
+    private Color nonCriticalTorColor = new Color(255f / 255f, 166f / 255f, 0f); // #FFA600 
+    private Color criticalTorColor = new Color(255f / 255f, 38f / 255f, 0f);     // #FF2600 
+    private Color darkGreyColor = new Color(76f / 255f, 76f / 255f, 76f / 255f); // #4C4C4C 
+    private Color alksReadyColor = new Color(140f / 255f, 115f / 255f, 255f / 255f); //#8C73FF
+
 
     private bool isBlinking = false;
     private float torTimer = 0f;
@@ -67,20 +69,26 @@ public class TORON_OFF : MonoBehaviour
         else if (Input.GetKeyDown(KeyCode.S))
         {
             PlayPopSound();
-            ActivateTorOff();
-            LogInteraction("S", "ALKS ON", "Cyan");
+            ActivateAlksReady();
+            LogInteraction("S", "ALKS Ready", "Purple");
         }
         else if (Input.GetKeyDown(KeyCode.D))
         {
             PlayPopSound();
-            ActivateNonCriticalTor();
-            LogInteraction("D", "Requesting Manual Take Over", "Orange");
+            ActivateTorOff();
+            LogInteraction("D", "ALKS ON", "Cyan");
         }
         else if (Input.GetKeyDown(KeyCode.F))
         {
             PlayPopSound();
+            ActivateNonCriticalTor();
+            LogInteraction("F", "Requesting Manual Take Over", "Orange");
+        }
+        else if (Input.GetKeyDown(KeyCode.G))
+        {
+            PlayPopSound();
             ActivateCriticalTor();
-            LogInteraction("F", "Requesting Manual Take Over", "Red");
+            LogInteraction("G", "Requesting Manual Take Over", "Red");
         }
 
         HandleTorState();
@@ -146,6 +154,19 @@ public class TORON_OFF : MonoBehaviour
         UpdateStatusText("System Shut Down");
         StopBeepSound();
     }
+
+    void ActivateAlksReady()
+    {
+        SetLightAndBackground(alksReadyColor);
+        isNonCriticalActive = false;
+        isCriticalActive = false;
+        isBlinking = false;
+        torTimer = 0f;
+
+        UpdateStatusText("ALKS Ready");
+        StopBeepSound();
+    }
+
 
     void SetLightAndBackground(Color color)
     {
@@ -269,6 +290,3 @@ public class TORON_OFF : MonoBehaviour
         Debug.Log($"Logged: {logEntry}");
     }
 }
-
-
-
